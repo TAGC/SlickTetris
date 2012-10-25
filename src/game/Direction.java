@@ -1,9 +1,9 @@
 package game;
 
 public enum Direction {
-	RIGHT (0, 1),
-	DOWN (-1, 0),
-	LEFT (0, -1);
+	RIGHT (1, 0),
+	DOWN (0, -1),
+	LEFT (-1, 0);
 	
 	private final int verticalMotion;
 	private final int horizontalMotion;
