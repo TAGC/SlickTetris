@@ -2,6 +2,7 @@ package game;
 
 import java.util.Random;
 
+import org.lwjgl.opengl.Display;
 import org.newdawn.slick.AppGameContainer;
 import org.newdawn.slick.BasicGame;
 import org.newdawn.slick.GameContainer;
@@ -36,10 +37,21 @@ public class Tetris extends BasicGame {
 		
 		activePiece.display();
 		pit.display();
+		renderCenteredMessage("SlickTetris", 80, g);
+		renderCenteredMessage("A work-in-progress by TAGC", 100, g);
+	}
+	
+	private void renderCenteredMessage(String message, int y, Graphics g) {
+		int x;
+		int width = g.getFont().getWidth(message);
+		
+		x = (WINDOW_WIDTH - width)/2;
+		g.drawString(message, x, y);
 	}
 
 	@Override
 	public void init(GameContainer container) throws SlickException {
+		System.out.println("N E W    G A M E");
 		pit = new Pit();
 		setActivePiece();
 	}
@@ -49,43 +61,31 @@ public class Tetris extends BasicGame {
 			throws SlickException {
 		
 		handleInput(container.getInput());
-		setActivePiece();
-		
-		if(moveCooldown < MOVE_COOLDOWN_MAX) {
-			moveCooldown += delta;
-			System.out.println("nextMove = " + nextMove);
-		} else if(nextMove != null) {
-			activePiece.movePiece(nextMove);
-			moveCooldown = 0;
-			nextMove = null;
-		}
-		
-		if(rotateCooldown < ROTATE_COOLDOWN_MAX) {
-			//System.out.println("rotateCooldown : " + rotateCooldown);
-			//System.out.println("setRotate : " + setRotate);
-			rotateCooldown += delta;
-		} else if(setRotate) {
-			rotateCooldown = 0;
-			setRotate = false;
-			System.out.println("Rotating in main");
-			activePiece.rotate();
-		}
-		
-		pieceFallTimer += delta;
-		if(pieceFallTimer >= PIECE_FALL_TIMER_MAX)
-		{
-			pieceFallTimer = 0;
-			if(nextMove != Direction.DOWN) {
-				activePiece.movePiece(Direction.DOWN);
-			}
+		if(!pit.getOverflowedStatus()) {
+			runGame(delta);
+		} else {
+			System.out.println("G A M E    O V E R\n\n");
+			System.out.println("Thanks for playing");
+			Display.destroy();
+			System.exit(0);
 		}
 	}
 	
 	private void setActivePiece() {
 		if(activePiece == null || !activePiece.getActive()) {
+			refreshStates();
 			activePiece = getRandomPiece();
+			//activePiece = Piece.I_PIECE;
 			activePiece.drop(pit);
+			setRotate = false;
 		}
+	}
+	
+	private void refreshStates() {
+		rotateCooldown = 0;
+		moveCooldown = 0;
+		setRotate = false;
+		nextMove = null;
 	}
 	
 	private void handleInput(Input input) {
@@ -110,9 +110,38 @@ public class Tetris extends BasicGame {
 	}
 	
 	private Piece getRandomPiece() {
-		Piece[] pieces = Piece.values();
+		PieceType[] pieces = PieceType.values();
 		Random rand = new Random();
-		return pieces[rand.nextInt(pieces.length)];
+		return new Piece(pieces[rand.nextInt(pieces.length)]);
+	}
+	
+	private void runGame(int delta) {
+		setActivePiece();
+		
+		if(moveCooldown < MOVE_COOLDOWN_MAX) {
+			moveCooldown += delta;
+		} else if(nextMove != null) {
+			activePiece.movePiece(nextMove);
+			moveCooldown = 0;
+			nextMove = null;
+		}
+		
+		if(rotateCooldown < ROTATE_COOLDOWN_MAX) {
+			rotateCooldown += delta;
+		} else if(setRotate) {
+			rotateCooldown = 0;
+			setRotate = false;
+			activePiece.rotate();
+		}
+		
+		pieceFallTimer += delta;
+		if(pieceFallTimer >= PIECE_FALL_TIMER_MAX)
+		{
+			pieceFallTimer = 0;
+			if(nextMove != Direction.DOWN) {
+				activePiece.movePiece(Direction.DOWN);
+			}
+		}
 	}
 	
 	public static void main(String[] args) {

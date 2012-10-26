@@ -2,56 +2,24 @@ package game;
 
 import java.util.Random;
 
-public enum Piece {
-	O_PIECE (new boolean[][]{{true, true, false, false},
-							 {true, true, false, false},
-							 {false, false, false, false},
-							 {false, false, false, false}
-							 }),
-	J_PIECE (new boolean[][]{{false, true, false, false},
-							 {false, true, false, false},
-							 {true, true, false, false},
-							 {false, false, false, false}
-							 }),
-	I_PIECE (new boolean[][]{{true, false, false, false},
-							 {true, false, false, false},
-							 {true, false, false, false},
-							 {true, false, false, false}
-							 }),
-	L_PIECE (new boolean[][]{{true, false, false, false},
-							 {true, false, false, false},
-							 {true, true, false, false},
-							 {false, false, false, false}
-							 }),
-	S_PIECE (new boolean[][]{{false, true, true, false},
-							 {true, true, false, false},
-							 {false, false, false, false},
-							 {false, false, false, false}
-							 }),
-	Z_PIECE (new boolean[][]{{true, true, false, false},
-							 {false, true, true, false},
-							 {false, false, false, false},
-							 {false, false, false, false}
-							 }),
-	T_PIECE (new boolean[][]{{true, true, true, false},
-							 {false, true, false, false},
-							 {false, false, false, false},
-							 {false, false, false, false}
-							 });
+public class Piece {
 	
-	private static final int BLOCKS_PER_PIECE = 4; 
+	private static final int BLOCKS_PER_PIECE = 4;
+	private final boolean[][] occupiedSpacesFinal;
 	private boolean[][] occupiedSpaces;
 	private int[] topLeftSpaceLocation;
 	private Pit pit;
 	private Block[] blocks;
 	private boolean active;
+	private int rotationState = 0;
 	
-	Piece(boolean[][] occupiedSpaces) {
+	Piece(PieceType pieceType) {
 		Random rand;
 		Colour[] colours;
 		Colour colour;
 		
-		this.occupiedSpaces = occupiedSpaces;
+		this.occupiedSpaces = pieceType.getOccupiedSpaces();
+		occupiedSpacesFinal = occupiedSpaces;
 		topLeftSpaceLocation = new int[2];
 		
 		rand = new Random();
@@ -66,9 +34,13 @@ public enum Piece {
 	
 	public void drop(Pit pit) {
 		setPitState(pit);
-		System.out.println("Shape height : " + getHeight() + ", shape width : " + getWidth());
 		setTopLeftSpaceLocation(Pit.PIT_WIDTH/2 - getWidth()/2, 0);
-		setActive(true);
+		
+		if(!isValidPosition()) {
+			pit.setOverflowStatus(true);
+		} else {
+			setActive(true);
+		}
 	}
 	
 	private void setPitState(Pit pit) {
@@ -83,9 +55,18 @@ public enum Piece {
 		return occupiedSpaces;
 	}
 	
+	private boolean[][] getOccupiedSpacesFinal() {
+		return occupiedSpacesFinal;
+	}
+	
 	public boolean isSpaceOccupiedBySelf(int x, int y) {
 		if (x < 0 || x >= 4 || y < 0 || y >= 4) return false;
 		return getOccupiedSpaces()[y][x];
+	}
+	
+	private boolean isSpaceOccupiedBySelfFinal(int x, int y) {
+		if (x < 0 || x >= 4 || y < 0 || y >= 4) return false;
+		return getOccupiedSpacesFinal()[y][x];
 	}
 	
 	public int[] getTopLeftSpaceLocation() {
@@ -110,44 +91,93 @@ public enum Piece {
 		moveVertically(posChange[1]);
 	}
 	
-	// Rotates 90 degrees clockwise.
+	// Rotates 90 degrees anti-clockwise.
 	public void rotate() {
 		boolean[][] newOccupiedSpaces = new boolean[4][4];
 		boolean[][] currOccupiedSpaces = getOccupiedSpaces();
+		double originX, originY, newX, newY;
+		int absX, absY, width, height;
+		
+		absX = getTopLeftSpaceLocation()[0];
+		absY = getTopLeftSpaceLocation()[1];
+		width = getWidth();
+		height = getHeight();
+		
+		switch(rotationState) {
+		case 0:
+			setTopLeftSpaceLocation(absX - (4 - width), absY);
+			break;
+			
+		case 1:
+			setTopLeftSpaceLocation(absX, absY - (4 - height));
+			break;
+			
+		case 2:
+			setTopLeftSpaceLocation(absX + (4 - width), absY);
+			break;
+			
+		case 3:
+			setTopLeftSpaceLocation(absX, absY + (4 - height));
+			break;
+			
+		default:
+			System.out.println("Error occurred in rotation");
+			break;
+		}
+		
+		for(int x=0; x < 4; x++) {
+			for(int y=0; y < 4; y++) {
+				originX = x - 1.5;
+				originY = y - 1.5;
+				newX = originY + 1.5;
+				newY = -originX + 1.5;
+				newOccupiedSpaces[(int)newX][(int)newY] = currOccupiedSpaces[x][y];
+			}
+		}
+		
+		setOccupiedSpaces(newOccupiedSpaces);
+		if(isValidPosition()) {
+			rotationState = (rotationState + 1) % 4;
+		} else {
+			setOccupiedSpaces(currOccupiedSpaces);
+			setTopLeftSpaceLocation(absX, absY);
+		}
+	}
+	
+	private boolean isValidPosition() {
+		int absX, absY;
+		int blockX, blockY;
+		
+		absX = getTopLeftSpaceLocation()[0];
+		absY = getTopLeftSpaceLocation()[1];
 		
 		for(int x=0; x < 4; x++) {
 			for(int y=0; y < 4; y++) {
 				
-				// Top-left quadrant.
-				if(x <= 1 && y <= 1) {
-					newOccupiedSpaces[3-x][y] = currOccupiedSpaces[x][y];
-				}
-				// Top-right quadrant.
-				else if(x >= 2 && y <= 1) {
-					newOccupiedSpaces[x][3-y] = currOccupiedSpaces[x][y];
-				}
-				// Bottom-right quadrant.
-				else if(x >= 2 && y >= 2) {
-					newOccupiedSpaces[x-2][y] = currOccupiedSpaces[x][y];
+				if(isSpaceOccupiedBySelf(x, y)) {
+					blockX = absX + x;
+					blockY = absY + y;
 					
-				}
-				// Bottom-left quadrant.
-				else if(x <= 1 && y >= 2) {
-					newOccupiedSpaces[x][y-2] = currOccupiedSpaces[x][y];
+					if(pit.isSpaceOccupied(blockX, blockY)) return false;
 				}
 			}
-			setOccupiedSpaces(newOccupiedSpaces);
 		}
+		
+		return true;
 	}
 	
 	private void embedBlocksInPit() {
 		int absX = getTopLeftSpaceLocation()[0];
 		int absY = getTopLeftSpaceLocation()[1];
-		int blockX, blockY;
+		int blockX, blockY, x, y;
 		
 		int blockIndex = 0;
-		for(int x=0; x < BLOCKS_PER_PIECE; x++) {
-			for(int y=0; y < BLOCKS_PER_PIECE; y++) {
+		for(int trueY=0; trueY < 4; trueY++) {
+			for(int trueX=0; trueX < 4; trueX++) {
+				
+				x = changeIterationThroughArray(trueX, trueY)[0];
+				y = changeIterationThroughArray(trueX, trueY)[1];
+				
 				if(isSpaceOccupiedBySelf(x, y)) {
 					blockX = x + absX;
 					blockY = y + absY;
@@ -157,12 +187,14 @@ public enum Piece {
 				}
 			}
 		}
+		
+		pit.deleteFullRows();
 	}
 	
 	private int getHeight() {
 		for(int y=3; y >= 0; y--) {
 			for(int x=0; x < 4; x++) {
-				if(isSpaceOccupiedBySelf(x, y)) {
+				if(isSpaceOccupiedBySelfFinal(x, y)) {
 					return 3-y;
 				}
 			}
@@ -174,7 +206,7 @@ public enum Piece {
 	private int getWidth() {
 		for(int x=3; x >= 0; x--) {
 			for(int y=0; y < 4; y++) {
-				if(isSpaceOccupiedBySelf(x, y)) {
+				if(isSpaceOccupiedBySelfFinal(x, y)) {
 					return 3-x;
 				}
 			}
@@ -279,6 +311,46 @@ public enum Piece {
 		setTopLeftSpaceLocation(absX+posChange, absY);
 	}
 	
+	private int[] changeIterationThroughArray(int trueX, int trueY) {
+		int x, y;
+		
+		switch(rotationState) {
+		// Normal orientation, go right and then down.
+		case 0:
+			x = trueX;
+			y = trueY;
+			break;
+			
+		// Rotated 90 degrees clockwise, go down and
+		// then leftwards.
+		case 1:
+			x = 3-trueY;
+			y = trueX;
+			break;
+			
+		// Rotated 180 degrees clockwise, go left and
+		// then up.
+		case 2:
+			x = 3-trueX;
+			y = 3-trueY;
+			break;
+			
+		// Rotated 270 degrees clockwise, go up and
+		// then right.
+		case 3:
+			x = trueY;
+			y = 3-trueX;
+			break;
+			
+		default:
+			System.out.println("Error occurred in changing" +
+					"iteration through array");
+			return null;
+		}
+		
+		return new int[]{x, y};
+	}
+	
 	public void display() {	
 		int pitX = pit.getTopLeftPixelLocation()[0];
 		int pitY = pit.getTopLeftPixelLocation()[1];
@@ -287,11 +359,17 @@ public enum Piece {
 		int pieceY = this.getTopLeftSpaceLocation()[1]*Pit.SPACE_HEIGHT + pitY;
 		
 		int blockX, blockY;
+		int x, y;
 		
 		int index = 0;
 		while(index < BLOCKS_PER_PIECE) {
-			for(int x=0; x < 4; x++) {
-				for(int y=0; y < 4; y++) {
+			for(int trueY=0; trueY < 4; trueY++) {
+				for(int trueX=0; trueX < 4; trueX++) {
+					
+					// Keeps the block colouring correct between
+					// different states of rotation.
+					x = changeIterationThroughArray(trueX, trueY)[0];
+					y = changeIterationThroughArray(trueX, trueY)[1];
 					
 					if(isSpaceOccupiedBySelf(x, y)) {
 						blockX = x*Pit.SPACE_WIDTH + pieceX;

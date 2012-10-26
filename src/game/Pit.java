@@ -9,6 +9,7 @@ public class Pit {
 	
 	private Block[][] pitBlockSpaces;
 	private int[] topLeftPixelLocation;
+	private boolean overflowed;
 	
 	public Pit() {
 		pitBlockSpaces = new Block[PIT_WIDTH][PIT_DEPTH];
@@ -19,15 +20,18 @@ public class Pit {
 			}
 		}
 		
+		overflowed = false;
 		setTopLeftPixelLocation(0, 0);
 	}
 	
 	public boolean isSpaceOccupied(int x, int y) {
 		if (x < 0 || x >= PIT_WIDTH || y >= PIT_DEPTH) return true;
+		else if(y < 0) return false;
 		return pitBlockSpaces[x][y] != null;
 	}
 	
 	public Block getBlockAtLocation(int x, int y) {
+		if (x < 0 || x >= PIT_WIDTH || y < 0 || y >= PIT_DEPTH) return null;
 		return getBlocks()[x][y];
 	}
 	
@@ -36,6 +40,7 @@ public class Pit {
 	}
 	
 	public void addBlockToPit(Block block, int x, int y) {
+		if (x < 0 || x >= PIT_WIDTH || y >= PIT_DEPTH) return;
 		pitBlockSpaces[x][y] = block;
 	}
 	
@@ -49,6 +54,52 @@ public class Pit {
 	
 	public int[] getTopLeftPixelLocation() {
 		return topLeftPixelLocation;
+	}
+	
+	public void setOverflowStatus(boolean overflowed) {
+		this.overflowed = overflowed;
+	}
+	
+	public boolean getOverflowedStatus() {
+		return overflowed;
+	}
+	
+	public void deleteFullRows() {
+		boolean rowDeleted = false;
+		
+		do {
+			rowDeleted = false;
+			
+			for(int y=0; y < PIT_DEPTH; y++) {
+				if(isRowFull(y)) {
+					System.out.println("Clearing row " + y);
+					clearRow(y);
+					rowDeleted = true;
+				}
+			}
+		} while(rowDeleted);
+	}
+	
+	private void clearRow(int row) {
+		Block block;
+		
+		for(int x=0; x < PIT_WIDTH; x++) {
+			removeBlockFromPit(x, row);
+			for(int y=row; y >= 0; y--) {
+				block = getBlockAtLocation(x, y-1);
+				addBlockToPit(block, x, y);
+			}
+		}
+	}
+	
+	private boolean isRowFull(int row) {
+		if(row < 0 || row >= PIT_DEPTH) return false;
+		
+		for(int x=0; x < PIT_WIDTH; x++) {
+			if(!isSpaceOccupied(x, row)) return false;
+		}
+		
+		return true;
 	}
 	
 	public void display() {
