@@ -2,6 +2,8 @@ package game;
 
 import java.util.Random;
 
+import utility.SoundPlayer;
+
 public class Piece {
 	
 	private static final int BLOCKS_PER_PIECE = 4;
@@ -167,6 +169,11 @@ public class Piece {
 	}
 	
 	private void embedBlocksInPit() {
+		SoundPlayer pitSoundPlayer;
+		
+		pitSoundPlayer = pit.getSoundPlayer();
+		String pieceEmbedSound = "blip.ogg";
+		
 		int absX = getTopLeftSpaceLocation()[0];
 		int absY = getTopLeftSpaceLocation()[1];
 		int blockX, blockY, x, y;
@@ -183,11 +190,13 @@ public class Piece {
 					blockY = y + absY;
 					
 					pit.addBlockToPit(blocks[blockIndex], blockX, blockY);
+					pit.addPoints(blocks[blockIndex].getColour().getWorth());
 					blockIndex++;
 				}
 			}
 		}
 		
+		pitSoundPlayer.playSound(pieceEmbedSound);
 		pit.deleteFullRows();
 	}
 	

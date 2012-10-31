@@ -4,15 +4,21 @@ import org.newdawn.slick.Image;
 import org.newdawn.slick.SlickException;
 
 public enum Colour {
-	BLUE ("resources\\images\\blue_piece_colour.png"),
-	GREEN ("resources\\images\\green_piece_colour.png"),
-	RED ("resources\\images\\red_piece_colour.png"),
-	YELLOW ("resources\\images\\yellow_piece_colour.png");
+	BLUE ("resources\\images\\blue_piece_colour.png", 10),
+	GREEN ("resources\\images\\green_piece_colour.png", 20),
+	RED ("resources\\images\\red_piece_colour.png", 50),
+	YELLOW ("resources\\images\\yellow_piece_colour.png", 100);
 	
 	private final String path;
+	private final int value;
 	
-	Colour(String path) {
+	Colour(String path, int value) {
 		this.path = path;
+		this.value = value;
+	}
+	
+	public int getWorth() {
+		return value;
 	}
 	
 	public String getPath() {

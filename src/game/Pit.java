@@ -1,17 +1,25 @@
 package game;
 
+import utility.SoundPlayer;
+
 public class Pit {
 	
 	public static final int SPACE_WIDTH = 25;
 	public static final int SPACE_HEIGHT = 25;
 	public static final int PIT_WIDTH = Tetris.WINDOW_WIDTH/SPACE_WIDTH;
 	public static final int PIT_DEPTH = Tetris.WINDOW_HEIGHT/SPACE_HEIGHT;
+	public static final int DOWN_MOVE_POINTS = 20;
 	
 	private Block[][] pitBlockSpaces;
 	private int[] topLeftPixelLocation;
 	private boolean overflowed;
+	private int score;
+	
+	private SoundPlayer soundPlayer;
 	
 	public Pit() {
+		initialisePitSoundFX();
+		
 		pitBlockSpaces = new Block[PIT_WIDTH][PIT_DEPTH];
 		
 		for(int x=0; x < PIT_WIDTH; x++) {
@@ -20,8 +28,22 @@ public class Pit {
 			}
 		}
 		
+		score = 0;
 		overflowed = false;
 		setTopLeftPixelLocation(0, 0);
+	}
+	
+	private void initialisePitSoundFX() {
+		String[] sounds = new String[]
+				{
+					"blip.ogg"
+				};
+		
+		soundPlayer = new SoundPlayer(sounds, Tetris.getSoundPath());
+	}
+	
+	public SoundPlayer getSoundPlayer() {
+		return soundPlayer;
 	}
 	
 	public boolean isSpaceOccupied(int x, int y) {
@@ -64,32 +86,50 @@ public class Pit {
 		return overflowed;
 	}
 	
+	public int getScore() {
+		return score;
+	}
+	
+	public void addPoints(int points) {
+		score += points;
+	}
+	
 	public void deleteFullRows() {
 		boolean rowDeleted = false;
+		int multiplier = 1;
+		int accumScore = 0;
 		
 		do {
 			rowDeleted = false;
 			
 			for(int y=0; y < PIT_DEPTH; y++) {
 				if(isRowFull(y)) {
-					System.out.println("Clearing row " + y);
-					clearRow(y);
+					accumScore += clearRow(y) * multiplier;
+					multiplier++;
 					rowDeleted = true;
 				}
 			}
 		} while(rowDeleted);
+		
+		addPoints(accumScore);
 	}
 	
-	private void clearRow(int row) {
+	private int clearRow(int row) {
 		Block block;
+		int clearScore = 0;
 		
 		for(int x=0; x < PIT_WIDTH; x++) {
+			block = getBlockAtLocation(x, row);
+			clearScore += block.getColour().getWorth() * 10;
 			removeBlockFromPit(x, row);
+			
 			for(int y=row; y >= 0; y--) {
 				block = getBlockAtLocation(x, y-1);
 				addBlockToPit(block, x, y);
 			}
 		}
+		
+		return clearScore;
 	}
 	
 	private boolean isRowFull(int row) {
